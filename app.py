@@ -21,7 +21,8 @@ st.title("OTT Viewer Engagement Score Predictor")
 
 # Form UI
 with st.form("prediction_form"):
-    gender = st.selectbox("Gender", ["Male", "Female"])
+    gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+    gender_encoded = {'Male': 0, 'Female': 1, 'Other': 2}[gender]
     state = st.selectbox("State", ["Madhya Pradesh", "Other"])
     lang = st.selectbox("Language Preference", ["Hindi", "Other"])
     device = st.selectbox("Device Type", ["Smartphone", "Other"])
@@ -70,3 +71,4 @@ if submit:
     # Predict
     prediction = model.predict(input_df)
     st.success(f"Predicted Engagement Score: {prediction[0]:.2f}")
+
