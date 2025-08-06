@@ -8,12 +8,13 @@ import numpy as np
 try:
     model = joblib.load("model.pkl")
     rfe = joblib.load("rfe.pkl")
-    # Load the list of original feature names that the model was trained on.
-    # You need to create this file from your training notebook.
-    # Example: joblib.dump(X_train.columns, 'feature_names.pkl')
-    original_features = joblib.load("selected_features.pkl") 
+    # --- CHANGE HERE ---
+    # Load the list of ALL ORIGINAL feature names that the model was trained on.
+    # You must create this file from your training notebook.
+    # Example: joblib.dump(list(X_train.columns), 'original_feature_names.pkl')
+    original_features = joblib.load("original_feature_names.pkl") 
 except FileNotFoundError:
-    st.error("Model or feature files not found. Please ensure 'model.pkl', 'rfe.pkl', and 'selected_features.pkl' are in the same directory.")
+    st.error("Model or feature files not found. Please ensure 'model.pkl', 'rfe.pkl', and 'original_feature_names.pkl' are in the same directory.")
     st.stop()
 
 
@@ -73,7 +74,7 @@ with st.form("prediction_form"):
 
 # --- Prediction Logic ---
 if submit:
-    # 1. Create a dictionary of the raw inputs
+    # 1. Create a dictionary of the raw inputs from the form
     input_data = {
         'age': age,
         'gender': {"Female": 0, "Male": 1, "Other": 2}[gender],
@@ -95,18 +96,24 @@ if submit:
     # 2. Create a DataFrame from the dictionary
     input_df = pd.DataFrame([input_data])
 
-    # 3. Reorder the DataFrame to match the training order
-    # This is the crucial step to fix the error.
-    # It ensures the columns are in the exact order the model expects.
+    # 3. Reorder the DataFrame to match the training order.
+    # This is the crucial step. It ensures the columns are in the exact 
+    # order the model expects, filling any missing ones with 0.
     try:
-        input_df_reordered = input_df[original_features]
+        # Create a full DataFrame with all original columns, filled with 0
+        full_input_df = pd.DataFrame(columns=original_features)
+        full_input_df = pd.concat([full_input_df, input_df]).fillna(0)
+        
+        # Ensure the final order is correct
+        input_df_reordered = full_input_df[original_features]
+
     except KeyError as e:
         st.error(f"A feature mismatch occurred. The model is missing the following feature from the input: {e}")
         st.stop()
 
 
     # 4. RFE transform
-    # The transform step will now work because the column names and order are correct
+    # The transform step will now work because it receives a DataFrame with all original features.
     input_df_rfe = rfe.transform(input_df_reordered)
 
     # 5. Predict
@@ -115,4 +122,3 @@ if submit:
     # 6. Display Result
     st.success(f"Predicted Engagement Score: {prediction[0]:.2f}")
     st.balloons()
-
