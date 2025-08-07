@@ -4,12 +4,13 @@ import joblib
 import numpy as np
 
 # --- Load Models & Feature List ---
+# Use a try-except block to handle potential file loading errors gracefully.
 try:
     model = joblib.load("model.pkl")
     rfe = joblib.load("rfe.pkl")
     original_features = joblib.load("original_feature_names.pkl") 
 except FileNotFoundError:
-    st.error("Model or feature files not found. Please ensure 'model.pkl', 'rfe.pkl', and 'original_feature_names.pkl' are in the same directory.")
+    st.error("Error: Model or feature files not found. Please ensure 'model.pkl', 'rfe.pkl', and 'original_feature_names.pkl' are in the same directory as your app.py file.")
     st.stop()
 
 
@@ -17,6 +18,7 @@ st.set_page_config(layout="wide")
 st.title("OTT View Completion Rate Predictor")
 
 # --- Form Input ---
+# Use a form to gather all inputs before running the prediction.
 with st.form("prediction_form"):
     st.header("User Demographics")
     col1, col2, col3 = st.columns(3)
@@ -25,17 +27,17 @@ with st.form("prediction_form"):
     with col2:
         gender = st.selectbox("Gender", ["Female", "Male", "Other"])
     with col3:
-        state = st.selectbox("State", ["Madhya Pradesh", "Other"])
+        state = st.selectbox("State", ["Madhya Pradesh", "Other"]) # Example state
 
     st.header("Viewing Context")
-    # --- CHANGE HERE: Added Season and removed Language ---
     col4, col5, col6 = st.columns(3)
     with col4:
-        device_type = st.selectbox("Device Type", ["Smartphone", "Other"])
+        device_type = st.selectbox("Device Type", ["Smartphone", "Tablet", "Laptop", "Connected TV"])
     with col5:
-        subscription_type = st.selectbox("Subscription Type", ["Free", "Paid"])
+        subscription_type = st.selectbox("Subscription Type", ["Free", "Premium"])
     with col6:
-        season = st.selectbox("Season", ["Spring", "Summer", "Fall", "Winter"])
+        # Day of week input for the model
+        day_of_week = st.selectbox("Day of the Week", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
 
 
     st.header("Viewing Habits & Ratings")
@@ -56,7 +58,7 @@ with st.form("prediction_form"):
     st.header("Date Information")
     col12, col13, col14, col15 = st.columns(4)
     with col12:
-        day = st.number_input("Day", min_value=1, max_value=31, value=15)
+        day = st.number_input("Day of Month", min_value=1, max_value=31, value=15)
     with col13:
         month = st.number_input("Month", min_value=1, max_value=12, value=6)
     with col14:
@@ -68,50 +70,57 @@ with st.form("prediction_form"):
 
 # --- Prediction Logic ---
 if submit:
-    # 1. Create a dictionary of the raw inputs from the form
-    # --- CHANGE HERE: Updated dictionary to match new features ---
-    input_data = {
-        'age': age,
-        'gender': {"Female": 1, "Male": 0, "Other": 2}[gender], # Adjusted to match notebook encoding
-        'watch_time_hours': watch_time_hours,
-        'regional_relevance': regional_relevance,
-        'family_friendly_score': family_friendly_score,
-        'user_rating': user_rating,
-        'Day': day,
-        'Month': month,
-        'Year': year,
-        'Quarter': quarter,
-        'state_Madhya Pradesh': 1 if state == "Madhya Pradesh" else 0,
-        'device_type_Smartphone': 1 if device_type == "Smartphone" else 0,
-        'subscription_type_Premium': 1 if subscription_type == "Paid" else 0,
-        'Season_Spring': 1 if season == "Spring" else 0,
-        'Season_Summer': 1 if season == "Summer" else 0,
-        'Season_Winter': 1 if season == "Winter" else 0,
-    }
+    # This is a robust way to create the input DataFrame for prediction.
+    # 1. Create a DataFrame with all the columns the model was trained on, and fill with 0.
+    input_df = pd.DataFrame(0, index=[0], columns=original_features)
 
-    # 2. Create a DataFrame from the dictionary
-    input_df = pd.DataFrame([input_data])
+    # 2. Update the DataFrame with the user's input from the form.
+    # This method avoids errors if a column is missing or named incorrectly.
+    
+    # Simple numerical inputs
+    input_df['age'] = age
+    input_df['gender'] = {"Female": 1, "Male": 0, "Other": 2}[gender]
+    input_df['watch_time_hours'] = watch_time_hours
+    input_df['regional_relevance'] = regional_relevance
+    input_df['family_friendly_score'] = family_friendly_score
+    input_df['user_rating'] = user_rating
+    input_df['Day'] = day
+    input_df['Month'] = month
+    input_df['Year'] = year
+    input_df['Quarter'] = quarter
 
-    # 3. Reorder the DataFrame to match the training order.
+    # One-hot encoded features: only set the selected one to 1 if it exists in the columns
+    # This prevents errors if the user selects a value that wasn't in the training data (e.g., 'Other')
+    if state != 'Other' and f'state_{state}' in input_df.columns:
+        input_df[f'state_{state}'] = 1
+            
+    if f'device_type_{device_type}' in input_df.columns:
+        input_df[f'device_type_{device_type}'] = 1
+
+    if subscription_type == 'Premium' and 'subscription_type_Premium' in input_df.columns:
+        input_df['subscription_type_Premium'] = 1
+    
+    # Determine the season from the selected month
+    if month in [12, 1, 2]: season = 'Winter'
+    elif month in [3, 4, 5]: season = 'Spring'
+    elif month in [6, 7, 8]: season = 'Summer'
+    else: season = 'Fall'
+    
+    if f'Season_{season}' in input_df.columns:
+        input_df[f'Season_{season}'] = 1
+
+    if f'Day_of_Week_{day_of_week}' in input_df.columns:
+        input_df[f'Day_of_Week_{day_of_week}'] = 1
+
+    # 3. RFE transform and Predict
     try:
-        # Create a full DataFrame with all original columns, filled with 0
-        full_input_df = pd.DataFrame(columns=original_features)
-        full_input_df = pd.concat([full_input_df, input_df]).fillna(0)
+        # The input_df now has the exact same structure as the training data
+        input_df_rfe = rfe.transform(input_df)
         
-        # Ensure the final order is correct
-        input_df_reordered = full_input_df[original_features]
+        prediction = model.predict(input_df_rfe)
 
-    except KeyError as e:
-        st.error(f"A feature mismatch occurred. The model is missing the following feature from the input: {e}")
-        st.stop()
+        st.success(f"Predicted View Completion Rate: {prediction[0]:.2%}")
+        st.balloons()
 
-
-    # 4. RFE transform
-    input_df_rfe = rfe.transform(input_df_reordered)
-
-    # 5. Predict
-    prediction = model.predict(input_df_rfe)
-
-    # 6. Display Result
-    st.success(f"Predicted View Completion Rate: {prediction[0]:.2%}")
-    st.balloons()
+    except Exception as e:
+        st.error(f"An error occurred during prediction: {e}")
