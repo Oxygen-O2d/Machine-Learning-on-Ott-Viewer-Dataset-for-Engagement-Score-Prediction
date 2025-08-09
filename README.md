@@ -1,4 +1,4 @@
-OTT Viewer Completion Rate Predictor
+OTT Viewer Completion Rate Predictor <br>
 A machine learning project that predicts the view completion rate for users on an Over-The-Top (OTT) media service. The project includes a data processing and model training pipeline in a Jupyter Notebook and an interactive web application built with Streamlit for real-time predictions.
 
 <!-- It's a good idea to add a screenshot of your app here -->
