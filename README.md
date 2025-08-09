@@ -36,8 +36,51 @@ File: `ott_viewer_dataset.csv`
 
 ---
 
+
 ## 🛠️ Installation
 1. **Clone this repository**:
 ```bash
 git clone https://github.com/your-username/ott-view-completion-prediction.git
 cd ott-view-completion-prediction
+```
+
+2. **Install Dependancies**:
+```bash
+   pip install -r requirements.txt
+```
+
+3. **Run locally**:
+```bash
+streamlit run app.py
+```
+
+## 🌐 Live Demo
+You can try the deployed app here:
+👉 Streamlit App Link
+
+## 📸 Screenshots
+Prediction Form
+
+Prediction Output
+
+## 📦 Tech Stack
+Python
+
+Pandas, NumPy
+
+Scikit-learn
+
+Matplotlib, Seaborn
+
+Streamlit
+
+## 🤝 Contributing
+Contributions are welcome!
+Steps:
+
+Fork this repo:
+1.Create a branch: git checkout -b feature/new-feature
+2.Commit changes: git commit -m 'Add new feature'
+3.Push branch: git push origin feature/new-feature
+4.Open a Pull Request
+   
