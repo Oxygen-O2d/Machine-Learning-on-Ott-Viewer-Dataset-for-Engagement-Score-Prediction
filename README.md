@@ -55,7 +55,7 @@ streamlit run app.py
 ```
 
 ## 🌐 Live Demo
-You can try the deployed app here:
+You can try the deployed app here(Might Take Some Time to Run the Model):
 ## 👉 Streamlit App Link: https://machine-learning-on-ott-viewer-dataset-for-engagement-score-pr.streamlit.app/#viewing-habits-and-ratings
 
 ## 📸 Screenshots
